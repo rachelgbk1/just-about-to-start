@@ -41,8 +41,9 @@ function addStickyNote(thing, num, unit) {
   var rotation = rotations[noteCount % rotations.length];
 
   var note = document.createElement('div');
-  note.className = 'sticky';
+  note.className = 'sticky slam';
   note.style.background = colour;
+  note.style.setProperty('--rot', rotation + 'deg');
   note.style.transform = 'rotate(' + rotation + 'deg)';
 
   note.innerHTML =
@@ -55,10 +56,88 @@ function addStickyNote(thing, num, unit) {
     openModal(thing, num, unit, colour);
   };
 
-  document.getElementById('board').appendChild(note);
+  var board = document.getElementById('board');
+  board.appendChild(note);
+
+  // shake the board when a note slams in
+  board.classList.remove('shake');
+  void board.offsetWidth; // restart animation
+  board.classList.add('shake');
+
+  // clean up the slam class so hover-scale works again
+  setTimeout(function () {
+    note.classList.remove('slam');
+  }, 500);
 }
 
-// placeholder so clicking a note doesn't crash
 function openModal(thing, num, unit, colour) {
   alert('I have been avoiding ' + thing + ' for ' + num + ' ' + unit);
+}
+
+// ================================
+// 5-MINUTE TIMER
+// ================================
+var TIMER_START = 5 * 60; // seconds
+var timerSeconds = TIMER_START;
+var timerInterval = null;
+var timerRunning = false;
+
+function fmt(s) {
+  var m = Math.floor(s / 60);
+  var r = s % 60;
+  return m + ':' + (r < 10 ? '0' + r : r);
+}
+
+function updateTimerDisplay() {
+  document.getElementById('timer-display').textContent = fmt(timerSeconds);
+}
+
+function toggleTimer() {
+  var btn = document.getElementById('timer-toggle');
+  var display = document.getElementById('timer-display');
+  var status = document.getElementById('timer-status');
+
+  if (timerRunning) {
+    clearInterval(timerInterval);
+    timerRunning = false;
+    btn.textContent = 'resume →';
+    status.textContent = '// paused _ take a breath';
+    display.classList.remove('running');
+    return;
+  }
+
+  if (timerSeconds === 0) {
+    resetTimer();
+  }
+
+  timerRunning = true;
+  btn.textContent = 'pause';
+  status.textContent = "// you're doing it. that's the whole point.";
+  display.classList.add('running');
+  display.classList.remove('done');
+
+  timerInterval = setInterval(function () {
+    timerSeconds--;
+    updateTimerDisplay();
+    if (timerSeconds <= 0) {
+      clearInterval(timerInterval);
+      timerRunning = false;
+      display.classList.remove('running');
+      display.classList.add('done');
+      btn.textContent = 'start →';
+      status.textContent = '// five minutes done _ you actually started';
+    }
+  }, 1000);
+}
+
+function resetTimer() {
+  clearInterval(timerInterval);
+  timerRunning = false;
+  timerSeconds = TIMER_START;
+  updateTimerDisplay();
+  document.getElementById('timer-toggle').textContent = 'start →';
+  document.getElementById('timer-status').textContent = "// click start when you're ready";
+  var display = document.getElementById('timer-display');
+  display.classList.remove('running');
+  display.classList.remove('done');
 }
