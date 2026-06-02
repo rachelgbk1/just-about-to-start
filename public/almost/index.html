@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Almost</title>
+  <link rel="stylesheet" href="style.css">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+</head>
+<body>
+
+  <!-- NAV BAR -->
+  <nav>
+    <span class="brand">ALMOST<em>.WEB</em></span>
+    <div class="nav-links">
+      <span onclick="go('hall')">hall of almost</span>
+      <span>about</span>
+    </div>
+  </nav>
+
+  <!-- SCREEN 1: HOME -->
+  <div id="pg-home" class="page active">
+    <div class="container">
+
+      <p class="eyebrow">procrastination translator</p>
+      <h1>I have been avoiding</h1>
+      <input
+        type="text"
+        id="inp-thing"
+        class="underline-input"
+        placeholder="going to the gym"
+      >
+
+      <div class="for-row">
+        <span class="for-text">for</span>
+        <input
+          type="number"
+          id="inp-num"
+          class="underline-input small"
+          value="3"
+        >
+        <select id="inp-unit" class="underline-select">
+          <option>days</option>
+          <option selected>weeks</option>
+          <option>months</option>
+          <option>years</option>
+        </select>
+      </div>
+
+      <button class="btn-primary" onclick="doTranslate()">translate it →</button>
+
+      <p class="hint">// anonymous _ no account _ no judgment</p>
+
+    </div>
+  </div>
+
+  <!-- SCREEN 2: OUTPUT (empty for now) -->
+  <div id="pg-output" class="page">
+    <div class="container">
+      <p>Screen 2 coming soon</p>
+    </div>
+  </div>
+
+  <!-- SCREEN 3: TIMER (empty for now) -->
+  <div id="pg-timer" class="page">
+    <div class="container">
+      <p>Screen 3 coming soon</p>
+    </div>
+  </div>
+
+  <!-- SCREEN 4: RESULT (empty for now) -->
+  <div id="pg-result" class="page">
+    <div class="container">
+      <p>Screen 4 coming soon</p>
+    </div>
+  </div>
+
+  <!-- SCREEN 5: HALL OF ALMOST (empty for now) -->
+  <div id="pg-hall" class="page">
+  <div class="container">
+
+    <div class="hall-top">
+      <h2>Hall of Almost</h2>
+      <p class="muted">0 entries</p>
+    </div>
+    <p class="hall-sub">// click any note to read the full translation</p>
+
+    <!-- THIS IS WHERE STICKY NOTES APPEAR -->
+    <div class="board" id="board"></div>
+
+    <button class="btn-primary" onclick="go('home')">+ add yours →</button>
+
+  </div>
+</div> 
+
+  <script src="script.js"></script>
+</body>
+</html>
