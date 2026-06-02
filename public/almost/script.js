@@ -118,20 +118,69 @@ function renderBoards() {
   var active = notes.filter(function(n){ return !n.expired; });
   var dead   = notes.filter(function(n){ return n.expired; });
 
-  var board = document.getElementById('board');
+  var mine = active.filter(function(n){ return n.user === me; });
+  var others = active.filter(function(n){ return n.user !== me; });
+
+  var boardMine = document.getElementById('board-mine');
+  var boardOthers = document.getElementById('board-others');
   var grave = document.getElementById('graveyard-board');
-  if (board) {
-    board.innerHTML = '';
-    active.forEach(function(n, i){ board.appendChild(buildNote(n, i, false, me)); });
-    var hc = document.getElementById('hall-count');
-    if (hc) hc.textContent = active.length + (active.length === 1 ? ' entry' : ' entries');
+
+  if (boardMine) {
+    boardMine.innerHTML = '';
+    if (mine.length === 0) {
+      boardMine.innerHTML = '<p class="muted" style="grid-column:1/-1;">// nothing here yet _ add one from the home screen</p>';
+    } else {
+      mine.forEach(function(n, i){ boardMine.appendChild(buildNote(n, i, false, me)); });
+    }
   }
+  if (boardOthers) {
+    boardOthers.innerHTML = '';
+    others.forEach(function(n, i){ boardOthers.appendChild(buildNote(n, i, false, me)); });
+  }
+  var hc = document.getElementById('hall-count');
+  if (hc) hc.textContent = active.length + (active.length === 1 ? ' entry' : ' entries');
+
   if (grave) {
     grave.innerHTML = '';
     dead.forEach(function(n, i){ grave.appendChild(buildNote(n, i, true, me)); });
     var gc = document.getElementById('grave-count');
     if (gc) gc.textContent = dead.length + ' buried';
   }
+}
+
+// ================================
+// SEED FAKE NOTES FROM OTHER USERS
+// ================================
+var SEED_KEY = 'almost_seeded_v1';
+var SAMPLE_THINGS = [
+  'replying to that email','starting my dissertation','calling the dentist',
+  'going for a run','cleaning my room','learning guitar','journaling',
+  'finishing the book','cancelling the subscription','texting back',
+  'doing my taxes','asking for a raise','meditating','sorting the laundry'
+];
+function seedOthers() {
+  if (localStorage.getItem(SEED_KEY)) return;
+  var notes = loadNotes();
+  var n = 8 + Math.floor(Math.random()*4);
+  for (var i = 0; i < n; i++) {
+    var thing = SAMPLE_THINGS[Math.floor(Math.random()*SAMPLE_THINGS.length)];
+    var num = 1 + Math.floor(Math.random()*11);
+    var unit = ['days','weeks','months','years'][Math.floor(Math.random()*4)];
+    var dNum = 1 + Math.floor(Math.random()*6);
+    var dUnit = ['hours','days','weeks'][Math.floor(Math.random()*3)];
+    var ms = { hours: 3600000, days: 86400000, weeks: 604800000 }[dUnit];
+    notes.push({
+      id: 'seed-' + i + '-' + Math.random().toString(36).slice(2,7),
+      user: makeUsername(),
+      thing: thing, num: num, unit: unit,
+      deadlineNum: dNum, deadlineUnit: dUnit,
+      deadline: Date.now() + dNum * ms,
+      colour: stickyColours[Math.floor(Math.random() * stickyColours.length)],
+      completed: false, createdAt: Date.now()
+    });
+  }
+  saveNotes(notes);
+  localStorage.setItem(SEED_KEY, '1');
 }
 
 function buildNote(n, i, isDead, me) {
@@ -236,6 +285,7 @@ function resetTimer() {
   if (lbl) lbl.textContent = me;
   var nav = document.getElementById('nav-me');
   if (nav) nav.textContent = '☉ ' + me;
+  seedOthers();
   checkExpiry();
   // re-check expiry every 30s
   setInterval(function(){

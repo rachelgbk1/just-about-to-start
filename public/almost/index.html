@@ -89,7 +89,13 @@
         <p class="muted" id="hall-count">0 entries</p>
       </div>
       <p class="hall-sub">// click a note to mark done _ unfinished notes go to the graveyard when time runs out</p>
-      <div class="board" id="board"></div>
+
+      <h3 class="board-heading">yours</h3>
+      <div class="board" id="board-mine"></div>
+
+      <h3 class="board-heading">everyone else</h3>
+      <div class="board" id="board-others"></div>
+
       <button class="btn-primary" onclick="go('home')">+ add yours →</button>
     </div>
   </div>
