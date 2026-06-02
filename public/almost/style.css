@@ -328,3 +328,15 @@ h1 {
 .muted { font-family: 'DM Mono', monospace; font-size: 11px; color: #888; }
 .hall-sub { font-family: 'DM Mono', monospace; font-size: 11px; color: #888; margin-bottom: 24px; }
 #nav-me { color: #1A1A1A; font-weight: 500; }
+
+.board-heading {
+  font-family: 'DM Mono', monospace;
+  font-size: 12px;
+  font-weight: 500;
+  color: #1A1A1A;
+  text-transform: lowercase;
+  letter-spacing: 0.06em;
+  margin: 20px 0 12px;
+  border-left: 2px solid #1A1A1A;
+  padding-left: 10px;
+}
