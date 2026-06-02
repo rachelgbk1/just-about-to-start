@@ -15,7 +15,8 @@
     <div class="nav-links">
       <span onclick="go('timer')">5-min timer</span>
       <span onclick="go('hall')">hall of almost</span>
-      <span>about</span>
+      <span onclick="go('graveyard')">graveyard</span>
+      <span id="nav-me" onclick="go('home')"></span>
     </div>
   </nav>
 
@@ -34,12 +35,7 @@
 
       <div class="for-row">
         <span class="for-text">for</span>
-        <input
-          type="number"
-          id="inp-num"
-          class="underline-input small"
-          value="3"
-        >
+        <input type="number" id="inp-num" class="underline-input small" value="3">
         <select id="inp-unit" class="underline-select">
           <option>days</option>
           <option selected>weeks</option>
@@ -48,17 +44,22 @@
         </select>
       </div>
 
+      <p class="eyebrow" style="margin-top:8px;">deadline _ how long do you have left</p>
+      <div class="for-row">
+        <span class="for-text">finish in</span>
+        <input type="number" id="inp-deadline-num" class="underline-input small" value="1">
+        <select id="inp-deadline-unit" class="underline-select">
+          <option>minutes</option>
+          <option>hours</option>
+          <option selected>days</option>
+          <option>weeks</option>
+        </select>
+      </div>
+
       <button class="btn-primary" onclick="doTranslate()">translate it →</button>
 
-      <p class="hint">// anonymous _ no account _ no judgment</p>
+      <p class="hint">// anonymous _ no account _ your name: <span id="me-label">…</span></p>
 
-    </div>
-  </div>
-
-  <!-- SCREEN 2: OUTPUT (empty for now) -->
-  <div id="pg-output" class="page">
-    <div class="container">
-      <p>Screen 2 coming soon</p>
     </div>
   </div>
 
@@ -80,30 +81,31 @@
     </div>
   </div>
 
-  <!-- SCREEN 4: RESULT (empty for now) -->
-  <div id="pg-result" class="page">
-    <div class="container">
-      <p>Screen 4 coming soon</p>
-    </div>
-  </div>
-
-  <!-- SCREEN 5: HALL OF ALMOST (empty for now) -->
+  <!-- SCREEN 5: HALL OF ALMOST -->
   <div id="pg-hall" class="page">
-  <div class="container">
-
-    <div class="hall-top">
-      <h2>Hall of Almost</h2>
-      <p class="muted">0 entries</p>
+    <div class="container">
+      <div class="hall-top">
+        <h2>Hall of Almost</h2>
+        <p class="muted" id="hall-count">0 entries</p>
+      </div>
+      <p class="hall-sub">// click a note to mark done _ unfinished notes go to the graveyard when time runs out</p>
+      <div class="board" id="board"></div>
+      <button class="btn-primary" onclick="go('home')">+ add yours →</button>
     </div>
-    <p class="hall-sub">// click any note to read the full translation</p>
-
-    <!-- THIS IS WHERE STICKY NOTES APPEAR -->
-    <div class="board" id="board"></div>
-
-    <button class="btn-primary" onclick="go('home')">+ add yours →</button>
-
   </div>
-</div> 
+
+  <!-- SCREEN 6: GRAVEYARD -->
+  <div id="pg-graveyard" class="page">
+    <div class="container">
+      <div class="hall-top">
+        <h2>Graveyard of Almost</h2>
+        <p class="muted" id="grave-count">0 buried</p>
+      </div>
+      <p class="hall-sub">// here lie the tasks that ran out of time</p>
+      <div class="board" id="graveyard-board"></div>
+      <button class="btn-primary" onclick="go('home')">try again →</button>
+    </div>
+  </div>
 
   <script src="script.js"></script>
 </body>

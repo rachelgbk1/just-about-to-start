@@ -305,3 +305,26 @@ h1 {
   transition: background 0.12s, color 0.12s;
 }
 .btn-ghost:hover { background: #1A1A1A; color: #F7F5F0; }
+
+/* graveyard / completed states */
+.sticky.dead {
+  filter: grayscale(1);
+  opacity: 0.75;
+}
+.sticky.done { opacity: 0.6; }
+.s-done {
+  margin-top: 8px;
+  background: #1A1A1A;
+  color: #F7F5F0;
+  border: none;
+  padding: 5px 10px;
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  cursor: pointer;
+}
+.s-done:hover { background: #333; }
+.hall-top { display: flex; align-items: baseline; gap: 12px; margin-bottom: 4px; }
+.hall-top h2 { font-size: 24px; font-weight: 500; }
+.muted { font-family: 'DM Mono', monospace; font-size: 11px; color: #888; }
+.hall-sub { font-family: 'DM Mono', monospace; font-size: 11px; color: #888; margin-bottom: 24px; }
+#nav-me { color: #1A1A1A; font-weight: 500; }
