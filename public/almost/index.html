@@ -11,8 +11,9 @@
 
   <!-- NAV BAR -->
   <nav>
-    <span class="brand">ALMOST<em>.WEB</em></span>
+    <span class="brand" onclick="go('home')">ALMOST<em>.WEB</em></span>
     <div class="nav-links">
+      <span onclick="go('timer')">5-min timer</span>
       <span onclick="go('hall')">hall of almost</span>
       <span>about</span>
     </div>
@@ -61,10 +62,21 @@
     </div>
   </div>
 
-  <!-- SCREEN 3: TIMER (empty for now) -->
+  <!-- SCREEN 3: TIMER -->
   <div id="pg-timer" class="page">
-    <div class="container">
-      <p>Screen 3 coming soon</p>
+    <div class="container timer-container">
+      <p class="eyebrow">five minute start</p>
+      <h2 class="timer-title">just five minutes.</h2>
+      <p class="timer-sub">// start what you've been avoiding _ no pressure to finish</p>
+
+      <div class="timer-display" id="timer-display">5:00</div>
+
+      <div class="timer-buttons">
+        <button class="btn-primary" id="timer-toggle" onclick="toggleTimer()">start →</button>
+        <button class="btn-ghost" onclick="resetTimer()">reset</button>
+      </div>
+
+      <p class="hint" id="timer-status">// click start when you're ready</p>
     </div>
   </div>
 
