@@ -285,6 +285,7 @@ function resetTimer() {
   if (lbl) lbl.textContent = me;
   var nav = document.getElementById('nav-me');
   if (nav) nav.textContent = '☉ ' + me;
+  seedOthers();
   checkExpiry();
   // re-check expiry every 30s
   setInterval(function(){
