@@ -181,8 +181,9 @@ function renderBoards() {
   var notes = loadNotes();
   var me = getUser();
 
-  var active = notes.filter(function(n){ return !n.expired; });
-  var dead   = notes.filter(function(n){ return n.expired; });
+  var done   = notes.filter(function(n){ return n.completed; });
+  var dead   = notes.filter(function(n){ return n.expired && !n.completed; });
+  var active = notes.filter(function(n){ return !n.expired && !n.completed; });
 
   var mine = active.filter(function(n){ return n.user === me; });
   var others = active.filter(function(n){ return n.user !== me; });
@@ -190,6 +191,7 @@ function renderBoards() {
   var boardMine = document.getElementById('board-mine');
   var boardOthers = document.getElementById('board-others');
   var grave = document.getElementById('graveyard-board');
+  var completedBoard = document.getElementById('completed-board');
 
   if (boardMine) {
     boardMine.innerHTML = '';
@@ -211,6 +213,17 @@ function renderBoards() {
     dead.forEach(function(n, i){ grave.appendChild(buildNote(n, i, true, me)); });
     var gc = document.getElementById('grave-count');
     if (gc) gc.textContent = dead.length + ' buried';
+  }
+
+  if (completedBoard) {
+    completedBoard.innerHTML = '';
+    if (done.length === 0) {
+      completedBoard.innerHTML = '<p class="muted" style="grid-column:1/-1;">// no completed tasks yet _ go finish something</p>';
+    } else {
+      done.forEach(function(n, i){ completedBoard.appendChild(buildNote(n, i, false, me)); });
+    }
+    var dc = document.getElementById('done-count');
+    if (dc) dc.textContent = done.length + ' done';
   }
 }
 
