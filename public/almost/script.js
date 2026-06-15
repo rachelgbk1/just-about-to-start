@@ -3,6 +3,7 @@
 // ================================
 var STORAGE_KEY = 'almost_notes_v1';
 var USER_KEY = 'almost_user_v1';
+var ACCOUNTS_KEY = 'almost_accounts_v1';
 
 function loadNotes() {
   try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; }
@@ -10,6 +11,13 @@ function loadNotes() {
 }
 function saveNotes(notes) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(notes));
+}
+function loadAccounts() {
+  try { return JSON.parse(localStorage.getItem(ACCOUNTS_KEY)) || {}; }
+  catch (e) { return {}; }
+}
+function saveAccounts(a) {
+  localStorage.setItem(ACCOUNTS_KEY, JSON.stringify(a));
 }
 
 // ================================
@@ -20,15 +28,72 @@ var PLANTS  = ['fern','willow','poppy','cactus','clover','lotus','maple','ivy','
 var ANIMALS = ['otter','fox','heron','badger','newt','lynx','mole','hare','crane','wolf','toad','owl'];
 
 function makeUsername() {
-  var c = COLOURS[Math.floor(Math.random()*COLOURS.length)];
-  var p = PLANTS[Math.floor(Math.random()*PLANTS.length)];
-  var a = ANIMALS[Math.floor(Math.random()*ANIMALS.length)];
-  return c + '-' + p + '-' + a;
+  var parts = [
+    COLOURS[Math.floor(Math.random()*COLOURS.length)],
+    PLANTS[Math.floor(Math.random()*PLANTS.length)],
+    ANIMALS[Math.floor(Math.random()*ANIMALS.length)]
+  ];
+  for (var i = parts.length - 1; i > 0; i--) {
+    var j = Math.floor(Math.random() * (i + 1));
+    var t = parts[i]; parts[i] = parts[j]; parts[j] = t;
+  }
+  return parts.join('-');
 }
 function getUser() {
-  var u = localStorage.getItem(USER_KEY);
-  if (!u) { u = makeUsername(); localStorage.setItem(USER_KEY, u); }
-  return u;
+  return localStorage.getItem(USER_KEY);
+}
+
+// ================================
+// AUTH
+// ================================
+function validEmail(e) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e); }
+
+function doSignup() {
+  var email = (document.getElementById('auth-email').value || '').trim().toLowerCase();
+  var msg = document.getElementById('auth-msg');
+  if (!validEmail(email)) { msg.textContent = '// that email looks off'; return; }
+  var accounts = loadAccounts();
+  if (accounts[email]) { msg.textContent = '// account exists _ try log in'; return; }
+  var username = makeUsername();
+  var used = Object.keys(accounts).map(function(k){return accounts[k];});
+  var tries = 0;
+  while (used.indexOf(username) !== -1 && tries < 20) { username = makeUsername(); tries++; }
+  accounts[email] = username;
+  saveAccounts(accounts);
+  localStorage.setItem(USER_KEY, username);
+  msg.textContent = '// account created _ your alias is ' + username;
+  setTimeout(function(){ enterApp(); }, 700);
+}
+
+function doLogin() {
+  var email = (document.getElementById('auth-email').value || '').trim().toLowerCase();
+  var msg = document.getElementById('auth-msg');
+  if (!validEmail(email)) { msg.textContent = '// that email looks off'; return; }
+  var accounts = loadAccounts();
+  if (!accounts[email]) { msg.textContent = '// no account _ hit create account'; return; }
+  localStorage.setItem(USER_KEY, accounts[email]);
+  enterApp();
+}
+
+function signOut() {
+  localStorage.removeItem(USER_KEY);
+  showAuth();
+}
+
+function showAuth() {
+  document.querySelectorAll('.page').forEach(function (p) { p.classList.remove('active'); });
+  document.getElementById('pg-auth').classList.add('active');
+  document.getElementById('nav-links').style.display = 'none';
+}
+
+function enterApp() {
+  document.getElementById('nav-links').style.display = 'flex';
+  var me = getUser();
+  var lbl = document.getElementById('me-label');
+  if (lbl) lbl.textContent = me;
+  var nav = document.getElementById('nav-me');
+  if (nav) nav.textContent = '☉ ' + me + ' _ sign out';
+  go('home');
 }
 
 // ================================
