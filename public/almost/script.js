@@ -48,30 +48,60 @@ function getUser() {
 // ================================
 function validEmail(e) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e); }
 
-function doSignup() {
-  var email = (document.getElementById('auth-email').value || '').trim().toLowerCase();
+async function hashPassword(pw) {
+  var buf = new TextEncoder().encode(pw);
+  var digest = await crypto.subtle.digest('SHA-256', buf);
+  return Array.from(new Uint8Array(digest))
+    .map(function(b){ return b.toString(16).padStart(2,'0'); }).join('');
+}
+
+// Migrate old format { email: "username" } -> { email: { username, passwordHash } }
+function migrateAccounts() {
+  var a = loadAccounts();
+  var changed = false;
+  Object.keys(a).forEach(function(k){
+    if (typeof a[k] === 'string') { a[k] = { username: a[k], passwordHash: null }; changed = true; }
+  });
+  if (changed) saveAccounts(a);
+}
+
+async function doSignup() {
+  var id = (document.getElementById('auth-id').value || '').trim().toLowerCase();
+  var pw = document.getElementById('auth-password').value || '';
   var msg = document.getElementById('auth-msg');
-  if (!validEmail(email)) { msg.textContent = '// that email looks off'; return; }
+  if (!validEmail(id)) { msg.textContent = '// signup needs a valid email'; return; }
+  if (pw.length < 6) { msg.textContent = '// password must be at least 6 characters'; return; }
   var accounts = loadAccounts();
-  if (accounts[email]) { msg.textContent = '// account exists _ try log in'; return; }
+  if (accounts[id]) { msg.textContent = '// account exists _ try log in'; return; }
   var username = makeUsername();
-  var used = Object.keys(accounts).map(function(k){return accounts[k];});
+  var used = Object.keys(accounts).map(function(k){ return accounts[k].username; });
   var tries = 0;
   while (used.indexOf(username) !== -1 && tries < 20) { username = makeUsername(); tries++; }
-  accounts[email] = username;
+  accounts[id] = { username: username, passwordHash: await hashPassword(pw) };
   saveAccounts(accounts);
   localStorage.setItem(USER_KEY, username);
   msg.textContent = '// account created _ your alias is ' + username;
-  setTimeout(function(){ enterApp(); }, 700);
+  setTimeout(function(){ enterApp(); }, 800);
 }
 
-function doLogin() {
-  var email = (document.getElementById('auth-email').value || '').trim().toLowerCase();
+async function doLogin() {
+  var id = (document.getElementById('auth-id').value || '').trim().toLowerCase();
+  var pw = document.getElementById('auth-password').value || '';
   var msg = document.getElementById('auth-msg');
-  if (!validEmail(email)) { msg.textContent = '// that email looks off'; return; }
+  if (!id || !pw) { msg.textContent = '// enter email/username and password'; return; }
   var accounts = loadAccounts();
-  if (!accounts[email]) { msg.textContent = '// no account _ hit create account'; return; }
-  localStorage.setItem(USER_KEY, accounts[email]);
+  var entry = accounts[id];
+  if (!entry) {
+    // try lookup by username
+    var match = Object.keys(accounts).find(function(k){ return accounts[k].username === id; });
+    if (match) entry = accounts[match];
+  }
+  if (!entry) { msg.textContent = '// no account _ hit create account'; return; }
+  var hash = await hashPassword(pw);
+  if (entry.passwordHash && entry.passwordHash !== hash) {
+    msg.textContent = '// wrong password'; return;
+  }
+  localStorage.setItem(USER_KEY, entry.username);
   enterApp();
 }
 
@@ -362,6 +392,7 @@ function resetTimer() {
 // INIT
 // ================================
 (function init() {
+  migrateAccounts();
   seedOthers();
   checkExpiry();
   if (getUser()) {
