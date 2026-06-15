@@ -100,9 +100,10 @@ function enterApp() {
 // PAGE SWITCH
 // ================================
 function go(id) {
+  if (!getUser()) { showAuth(); return; }
   document.querySelectorAll('.page').forEach(function (p) { p.classList.remove('active'); });
   document.getElementById('pg-' + id).classList.add('active');
-  if (id === 'hall' || id === 'graveyard') renderBoards();
+  if (id === 'hall' || id === 'graveyard' || id === 'completed') renderBoards();
 }
 
 // ================================
