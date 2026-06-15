@@ -12,13 +12,32 @@
   <!-- NAV BAR -->
   <nav>
     <span class="brand" onclick="go('home')">ALMOST</span>
-    <div class="nav-links">
+    <div class="nav-links" id="nav-links">
       <span onclick="go('timer')">5-min timer</span>
       <span onclick="go('hall')">hall of almost</span>
+      <span onclick="go('completed')">completed</span>
       <span onclick="go('graveyard')">graveyard</span>
-      <span id="nav-me" onclick="go('home')"></span>
+      <span id="nav-me" onclick="signOut()"></span>
     </div>
   </nav>
+
+  <!-- SCREEN 0: AUTH -->
+  <div id="pg-auth" class="page active">
+    <div class="container auth-container">
+      <p class="eyebrow">private _ no real names</p>
+      <h1 id="auth-title">welcome back</h1>
+      <p class="hint" style="margin-bottom:24px;">// log in or create an account _ you'll get a random alias so no one can judge you</p>
+
+      <input type="email" id="auth-email" class="underline-input" placeholder="you@somewhere.com">
+
+      <div class="auth-buttons">
+        <button class="btn-primary" onclick="doLogin()">log in →</button>
+        <button class="btn-ghost" onclick="doSignup()">create account</button>
+      </div>
+
+      <p class="hint" id="auth-msg"></p>
+    </div>
+  </div>
 
   <!-- SCREEN 1: HOME -->
   <div id="pg-home" class="page active">
