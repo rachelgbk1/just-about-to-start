@@ -3,6 +3,7 @@
 // ================================
 var STORAGE_KEY = 'almost_notes_v1';
 var USER_KEY = 'almost_user_v1';
+var ACCOUNTS_KEY = 'almost_accounts_v1';
 
 function loadNotes() {
   try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; }
@@ -10,6 +11,13 @@ function loadNotes() {
 }
 function saveNotes(notes) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(notes));
+}
+function loadAccounts() {
+  try { return JSON.parse(localStorage.getItem(ACCOUNTS_KEY)) || {}; }
+  catch (e) { return {}; }
+}
+function saveAccounts(a) {
+  localStorage.setItem(ACCOUNTS_KEY, JSON.stringify(a));
 }
 
 // ================================
@@ -20,24 +28,82 @@ var PLANTS  = ['fern','willow','poppy','cactus','clover','lotus','maple','ivy','
 var ANIMALS = ['otter','fox','heron','badger','newt','lynx','mole','hare','crane','wolf','toad','owl'];
 
 function makeUsername() {
-  var c = COLOURS[Math.floor(Math.random()*COLOURS.length)];
-  var p = PLANTS[Math.floor(Math.random()*PLANTS.length)];
-  var a = ANIMALS[Math.floor(Math.random()*ANIMALS.length)];
-  return c + '-' + p + '-' + a;
+  var parts = [
+    COLOURS[Math.floor(Math.random()*COLOURS.length)],
+    PLANTS[Math.floor(Math.random()*PLANTS.length)],
+    ANIMALS[Math.floor(Math.random()*ANIMALS.length)]
+  ];
+  for (var i = parts.length - 1; i > 0; i--) {
+    var j = Math.floor(Math.random() * (i + 1));
+    var t = parts[i]; parts[i] = parts[j]; parts[j] = t;
+  }
+  return parts.join('-');
 }
 function getUser() {
-  var u = localStorage.getItem(USER_KEY);
-  if (!u) { u = makeUsername(); localStorage.setItem(USER_KEY, u); }
-  return u;
+  return localStorage.getItem(USER_KEY);
+}
+
+// ================================
+// AUTH
+// ================================
+function validEmail(e) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e); }
+
+function doSignup() {
+  var email = (document.getElementById('auth-email').value || '').trim().toLowerCase();
+  var msg = document.getElementById('auth-msg');
+  if (!validEmail(email)) { msg.textContent = '// that email looks off'; return; }
+  var accounts = loadAccounts();
+  if (accounts[email]) { msg.textContent = '// account exists _ try log in'; return; }
+  var username = makeUsername();
+  var used = Object.keys(accounts).map(function(k){return accounts[k];});
+  var tries = 0;
+  while (used.indexOf(username) !== -1 && tries < 20) { username = makeUsername(); tries++; }
+  accounts[email] = username;
+  saveAccounts(accounts);
+  localStorage.setItem(USER_KEY, username);
+  msg.textContent = '// account created _ your alias is ' + username;
+  setTimeout(function(){ enterApp(); }, 700);
+}
+
+function doLogin() {
+  var email = (document.getElementById('auth-email').value || '').trim().toLowerCase();
+  var msg = document.getElementById('auth-msg');
+  if (!validEmail(email)) { msg.textContent = '// that email looks off'; return; }
+  var accounts = loadAccounts();
+  if (!accounts[email]) { msg.textContent = '// no account _ hit create account'; return; }
+  localStorage.setItem(USER_KEY, accounts[email]);
+  enterApp();
+}
+
+function signOut() {
+  localStorage.removeItem(USER_KEY);
+  showAuth();
+}
+
+function showAuth() {
+  document.querySelectorAll('.page').forEach(function (p) { p.classList.remove('active'); });
+  document.getElementById('pg-auth').classList.add('active');
+  document.getElementById('nav-links').style.display = 'none';
+}
+
+function enterApp() {
+  document.getElementById('nav-links').style.display = 'flex';
+  var me = getUser();
+  var lbl = document.getElementById('me-label');
+  if (lbl) lbl.textContent = me;
+  var nav = document.getElementById('nav-me');
+  if (nav) nav.textContent = '☉ ' + me + ' _ sign out';
+  go('home');
 }
 
 // ================================
 // PAGE SWITCH
 // ================================
 function go(id) {
+  if (!getUser()) { showAuth(); return; }
   document.querySelectorAll('.page').forEach(function (p) { p.classList.remove('active'); });
   document.getElementById('pg-' + id).classList.add('active');
-  if (id === 'hall' || id === 'graveyard') renderBoards();
+  if (id === 'hall' || id === 'graveyard' || id === 'completed') renderBoards();
 }
 
 // ================================
@@ -115,8 +181,9 @@ function renderBoards() {
   var notes = loadNotes();
   var me = getUser();
 
-  var active = notes.filter(function(n){ return !n.expired; });
-  var dead   = notes.filter(function(n){ return n.expired; });
+  var done   = notes.filter(function(n){ return n.completed; });
+  var dead   = notes.filter(function(n){ return n.expired && !n.completed; });
+  var active = notes.filter(function(n){ return !n.expired && !n.completed; });
 
   var mine = active.filter(function(n){ return n.user === me; });
   var others = active.filter(function(n){ return n.user !== me; });
@@ -124,6 +191,7 @@ function renderBoards() {
   var boardMine = document.getElementById('board-mine');
   var boardOthers = document.getElementById('board-others');
   var grave = document.getElementById('graveyard-board');
+  var completedBoard = document.getElementById('completed-board');
 
   if (boardMine) {
     boardMine.innerHTML = '';
@@ -145,6 +213,17 @@ function renderBoards() {
     dead.forEach(function(n, i){ grave.appendChild(buildNote(n, i, true, me)); });
     var gc = document.getElementById('grave-count');
     if (gc) gc.textContent = dead.length + ' buried';
+  }
+
+  if (completedBoard) {
+    completedBoard.innerHTML = '';
+    if (done.length === 0) {
+      completedBoard.innerHTML = '<p class="muted" style="grid-column:1/-1;">// no completed tasks yet _ go finish something</p>';
+    } else {
+      done.forEach(function(n, i){ completedBoard.appendChild(buildNote(n, i, false, me)); });
+    }
+    var dc = document.getElementById('done-count');
+    if (dc) dc.textContent = done.length + ' done';
   }
 }
 
@@ -187,7 +266,10 @@ function buildNote(n, i, isDead, me) {
   var rotation = rotations[i % rotations.length];
   var note = document.createElement('div');
   note.className = 'sticky' + (isDead ? ' dead' : '') + (n.completed ? ' done' : '');
-  note.style.background = isDead ? '#BDBDBD' : n.colour;
+  var bg = '#BDBDBD';
+  if (n.completed) bg = '#86EFAC';
+  else if (isDead) bg = '#8A8A8A';
+  note.style.background = bg;
   note.style.setProperty('--rot', rotation + 'deg');
   note.style.transform = 'rotate(' + rotation + 'deg)';
 
@@ -280,14 +362,13 @@ function resetTimer() {
 // INIT
 // ================================
 (function init() {
-  var me = getUser();
-  var lbl = document.getElementById('me-label');
-  if (lbl) lbl.textContent = me;
-  var nav = document.getElementById('nav-me');
-  if (nav) nav.textContent = '☉ ' + me;
   seedOthers();
   checkExpiry();
-  // re-check expiry every 30s
+  if (getUser()) {
+    enterApp();
+  } else {
+    showAuth();
+  }
   setInterval(function(){
     checkExpiry();
     var hall = document.getElementById('pg-hall');
