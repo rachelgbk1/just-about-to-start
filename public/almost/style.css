@@ -340,3 +340,9 @@ h1 {
   border-left: 2px solid #1A1A1A;
   padding-left: 10px;
 }
+
+/* AUTH */
+.auth-container { max-width: 480px; }
+.auth-buttons { display: flex; gap: 12px; margin: 24px 0 16px; }
+.auth-buttons .btn-primary { margin-bottom: 0; }
+.sticky.done { opacity: 1; }
