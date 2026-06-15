@@ -362,14 +362,13 @@ function resetTimer() {
 // INIT
 // ================================
 (function init() {
-  var me = getUser();
-  var lbl = document.getElementById('me-label');
-  if (lbl) lbl.textContent = me;
-  var nav = document.getElementById('nav-me');
-  if (nav) nav.textContent = '☉ ' + me;
   seedOthers();
   checkExpiry();
-  // re-check expiry every 30s
+  if (getUser()) {
+    enterApp();
+  } else {
+    showAuth();
+  }
   setInterval(function(){
     checkExpiry();
     var hall = document.getElementById('pg-hall');
