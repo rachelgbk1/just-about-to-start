@@ -7,10 +7,27 @@
   padding: 0;
 }
 
+:root {
+  --bg: #F7F5F0;
+  --fg: #1A1A1A;
+  --muted: #888;
+  --faint: #CCC;
+  --card: #FFFFFF;
+  --border: #1A1A1A;
+}
+body.theme-dark {
+  --bg: #141414;
+  --fg: #F2EFE8;
+  --muted: #9A9A9A;
+  --faint: #555;
+  --card: #1E1E1E;
+  --border: #F2EFE8;
+}
 body {
   font-family: sans-serif;
-  background-color: #F7F5F0;
-  color: #1A1A1A;
+  background-color: var(--bg);
+  color: var(--fg);
+  transition: background 0.2s, color 0.2s;
 }
 
 /* ================================

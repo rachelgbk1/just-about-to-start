@@ -18,8 +18,32 @@
       <span onclick="go('completed')">completed</span>
       <span onclick="go('graveyard')">graveyard</span>
       <span id="nav-me" onclick="signOut()"></span>
+      <span id="nav-settings" class="nav-dots" onclick="toggleSettings(event)">⋮</span>
     </div>
   </nav>
+
+  <!-- SETTINGS MENU -->
+  <div id="settings-menu" class="settings-menu" onclick="event.stopPropagation()">
+    <div class="settings-row">
+      <span class="settings-label">theme</span>
+      <button class="btn-ghost btn-small" id="theme-toggle" onclick="toggleTheme()">dark</button>
+    </div>
+    <hr class="settings-hr">
+    <div class="settings-section">
+      <p class="settings-label">change email</p>
+      <input type="email" id="set-email" class="set-input" placeholder="new email">
+      <input type="password" id="set-email-pw" class="set-input" placeholder="current password">
+      <button class="btn-ghost btn-small" onclick="changeEmail()">update email</button>
+    </div>
+    <hr class="settings-hr">
+    <div class="settings-section">
+      <p class="settings-label">change password</p>
+      <input type="password" id="set-pw-old" class="set-input" placeholder="current password">
+      <input type="password" id="set-pw-new" class="set-input" placeholder="new password (6+)">
+      <button class="btn-ghost btn-small" onclick="changePassword()">update password</button>
+    </div>
+    <p class="hint" id="set-msg"></p>
+  </div>
 
   <!-- SCREEN 0: AUTH -->
   <div id="pg-auth" class="page active">
