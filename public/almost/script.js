@@ -266,7 +266,10 @@ function buildNote(n, i, isDead, me) {
   var rotation = rotations[i % rotations.length];
   var note = document.createElement('div');
   note.className = 'sticky' + (isDead ? ' dead' : '') + (n.completed ? ' done' : '');
-  note.style.background = isDead ? '#BDBDBD' : n.colour;
+  var bg = '#BDBDBD';
+  if (n.completed) bg = '#86EFAC';
+  else if (isDead) bg = '#8A8A8A';
+  note.style.background = bg;
   note.style.setProperty('--rot', rotation + 'deg');
   note.style.transform = 'rotate(' + rotation + 'deg)';
 
