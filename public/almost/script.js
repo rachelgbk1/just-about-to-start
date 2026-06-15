@@ -392,6 +392,7 @@ function resetTimer() {
 // INIT
 // ================================
 (function init() {
+  migrateAccounts();
   seedOthers();
   checkExpiry();
   if (getUser()) {
