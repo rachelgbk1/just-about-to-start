@@ -363,3 +363,66 @@ h1 {
 .auth-buttons { display: flex; gap: 12px; margin: 24px 0 16px; }
 .auth-buttons .btn-primary { margin-bottom: 0; }
 .sticky.done { opacity: 1; }
+
+/* SETTINGS */
+.nav-dots {
+  font-size: 20px;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 0 6px;
+  color: var(--fg);
+}
+.settings-menu {
+  display: none;
+  position: absolute;
+  top: 58px;
+  right: 24px;
+  background: var(--bg);
+  border: 2px solid var(--border);
+  padding: 16px;
+  width: 280px;
+  z-index: 100;
+  font-family: 'DM Mono', monospace;
+}
+.settings-menu.open { display: block; }
+.settings-section { display: flex; flex-direction: column; gap: 8px; }
+.settings-row { display: flex; justify-content: space-between; align-items: center; }
+.settings-label {
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+  color: var(--muted);
+  letter-spacing: 0.06em;
+}
+.settings-hr { border: none; border-top: 1px dashed var(--faint); margin: 12px 0; }
+.set-input {
+  border: none;
+  border-bottom: 1px solid var(--border);
+  background: transparent;
+  color: var(--fg);
+  font-family: 'DM Mono', monospace;
+  font-size: 12px;
+  padding: 4px 2px;
+  outline: none;
+}
+.btn-small { padding: 6px 14px; font-size: 10px; }
+
+/* THEME OVERRIDES — map hardcoded values to vars where they appear in dark */
+body.theme-dark nav { background-color: var(--bg); border-bottom-color: var(--border); }
+body.theme-dark .brand,
+body.theme-dark h1,
+body.theme-dark .for-text,
+body.theme-dark .underline-input,
+body.theme-dark .timer-title,
+body.theme-dark .timer-display,
+body.theme-dark .hall-top h2,
+body.theme-dark .board-heading,
+body.theme-dark #nav-me { color: var(--fg); }
+body.theme-dark .underline-input,
+body.theme-dark .underline-select { border-bottom-color: var(--border); color: var(--fg); }
+body.theme-dark .eyebrow,
+body.theme-dark .board-heading { border-left-color: var(--border); }
+body.theme-dark .btn-primary { background: var(--fg); color: var(--bg); }
+body.theme-dark .btn-primary:hover { background: var(--muted); }
+body.theme-dark .btn-ghost { color: var(--fg); border-color: var(--border); }
+body.theme-dark .btn-ghost:hover { background: var(--fg); color: var(--bg); }
+body.theme-dark .s-done { background: var(--fg); color: var(--bg); }

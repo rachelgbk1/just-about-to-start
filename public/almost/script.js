@@ -410,3 +410,85 @@ function resetTimer() {
     }
   }, 30000);
 })();
+
+// ================================
+// SETTINGS MENU
+// ================================
+var THEME_KEY = 'almost_theme_v1';
+
+function applyTheme(t) {
+  if (t === 'dark') document.body.classList.add('theme-dark');
+  else document.body.classList.remove('theme-dark');
+  var btn = document.getElementById('theme-toggle');
+  if (btn) btn.textContent = t === 'dark' ? 'light' : 'dark';
+}
+function toggleTheme() {
+  var cur = localStorage.getItem(THEME_KEY) === 'dark' ? 'dark' : 'light';
+  var next = cur === 'dark' ? 'light' : 'dark';
+  localStorage.setItem(THEME_KEY, next);
+  applyTheme(next);
+}
+function toggleSettings(e) {
+  if (e) e.stopPropagation();
+  var m = document.getElementById('settings-menu');
+  m.classList.toggle('open');
+}
+document.addEventListener('click', function(e){
+  var m = document.getElementById('settings-menu');
+  var dots = document.getElementById('nav-settings');
+  if (!m || !m.classList.contains('open')) return;
+  if (m.contains(e.target) || (dots && dots.contains(e.target))) return;
+  m.classList.remove('open');
+});
+
+function findAccountByUsername(username) {
+  var accounts = loadAccounts();
+  var key = Object.keys(accounts).find(function(k){ return accounts[k].username === username; });
+  return key ? { key: key, entry: accounts[key], accounts: accounts } : null;
+}
+
+async function changeEmail() {
+  var msg = document.getElementById('set-msg');
+  var newEmail = (document.getElementById('set-email').value || '').trim().toLowerCase();
+  var pw = document.getElementById('set-email-pw').value || '';
+  if (!validEmail(newEmail)) { msg.textContent = '// enter a valid email'; return; }
+  var me = getUser();
+  var found = findAccountByUsername(me);
+  if (!found) { msg.textContent = '// account not found'; return; }
+  var hash = await hashPassword(pw);
+  if (found.entry.passwordHash && found.entry.passwordHash !== hash) {
+    msg.textContent = '// wrong current password'; return;
+  }
+  if (found.accounts[newEmail] && newEmail !== found.key) {
+    msg.textContent = '// that email is already used'; return;
+  }
+  delete found.accounts[found.key];
+  found.accounts[newEmail] = found.entry;
+  saveAccounts(found.accounts);
+  document.getElementById('set-email').value = '';
+  document.getElementById('set-email-pw').value = '';
+  msg.textContent = '// email updated';
+}
+
+async function changePassword() {
+  var msg = document.getElementById('set-msg');
+  var oldPw = document.getElementById('set-pw-old').value || '';
+  var newPw = document.getElementById('set-pw-new').value || '';
+  if (newPw.length < 6) { msg.textContent = '// new password must be 6+ chars'; return; }
+  var me = getUser();
+  var found = findAccountByUsername(me);
+  if (!found) { msg.textContent = '// account not found'; return; }
+  var oldHash = await hashPassword(oldPw);
+  if (found.entry.passwordHash && found.entry.passwordHash !== oldHash) {
+    msg.textContent = '// wrong current password'; return;
+  }
+  found.entry.passwordHash = await hashPassword(newPw);
+  found.accounts[found.key] = found.entry;
+  saveAccounts(found.accounts);
+  document.getElementById('set-pw-old').value = '';
+  document.getElementById('set-pw-new').value = '';
+  msg.textContent = '// password updated';
+}
+
+// init theme on load
+applyTheme(localStorage.getItem(THEME_KEY) === 'dark' ? 'dark' : 'light');
