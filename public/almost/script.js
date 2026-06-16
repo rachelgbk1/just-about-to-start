@@ -1,46 +1,43 @@
 // ================================
-// STORAGE
+// SUPABASE CLIENT
 // ================================
-var STORAGE_KEY = 'almost_notes_v1';
-var USER_KEY = 'almost_user_v1';
-var ACCOUNTS_KEY = 'almost_accounts_v1';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
-function loadNotes() {
-  try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; }
-  catch (e) { return []; }
-}
-function saveNotes(notes) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(notes));
-}
-function loadAccounts() {
-  try { return JSON.parse(localStorage.getItem(ACCOUNTS_KEY)) || {}; }
-  catch (e) { return {}; }
-}
-function saveAccounts(a) {
-  localStorage.setItem(ACCOUNTS_KEY, JSON.stringify(a));
-}
+const SUPABASE_URL = 'https://ulnulbepagucnhvhfrpq.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVsbnVsYmVwYWd1Y25odmhmcnBxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1ODE2NDUsImV4cCI6MjA5NzE1NzY0NX0.WWmwqyVuRTeHsX7cRu73o7Zb21tZj6Inor99o9jKQkk';
+
+const supabase = createClient(SUPABASE_URL, SUPABASE_KEY, {
+  auth: { persistSession: true, autoRefreshToken: true, storageKey: 'almost-auth' }
+});
+
+// expose handlers used from inline onclick handlers
+window.supabase = supabase;
+
+// ================================
+// STATE
+// ================================
+let currentUser = null;   // auth.user object
+let currentUsername = null;
+let cachedNotes = [];
 
 // ================================
 // RANDOM USERNAME (colour + plant + animal)
 // ================================
-var COLOURS = ['crimson','amber','indigo','sage','peach','olive','plum','teal','rose','mint','copper','slate'];
-var PLANTS  = ['fern','willow','poppy','cactus','clover','lotus','maple','ivy','thistle','daisy','moss','cedar'];
-var ANIMALS = ['otter','fox','heron','badger','newt','lynx','mole','hare','crane','wolf','toad','owl'];
+const COLOURS = ['crimson','amber','indigo','sage','peach','olive','plum','teal','rose','mint','copper','slate'];
+const PLANTS  = ['fern','willow','poppy','cactus','clover','lotus','maple','ivy','thistle','daisy','moss','cedar'];
+const ANIMALS = ['otter','fox','heron','badger','newt','lynx','mole','hare','crane','wolf','toad','owl'];
 
 function makeUsername() {
-  var parts = [
+  const parts = [
     COLOURS[Math.floor(Math.random()*COLOURS.length)],
     PLANTS[Math.floor(Math.random()*PLANTS.length)],
     ANIMALS[Math.floor(Math.random()*ANIMALS.length)]
   ];
-  for (var i = parts.length - 1; i > 0; i--) {
-    var j = Math.floor(Math.random() * (i + 1));
-    var t = parts[i]; parts[i] = parts[j]; parts[j] = t;
+  for (let i = parts.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [parts[i], parts[j]] = [parts[j], parts[i]];
   }
   return parts.join('-');
-}
-function getUser() {
-  return localStorage.getItem(USER_KEY);
 }
 
 // ================================
@@ -48,145 +45,146 @@ function getUser() {
 // ================================
 function validEmail(e) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e); }
 
-async function hashPassword(pw) {
-  var buf = new TextEncoder().encode(pw);
-  var digest = await crypto.subtle.digest('SHA-256', buf);
-  return Array.from(new Uint8Array(digest))
-    .map(function(b){ return b.toString(16).padStart(2,'0'); }).join('');
-}
-
-// Migrate old format { email: "username" } -> { email: { username, passwordHash } }
-function migrateAccounts() {
-  var a = loadAccounts();
-  var changed = false;
-  Object.keys(a).forEach(function(k){
-    if (typeof a[k] === 'string') { a[k] = { username: a[k], passwordHash: null }; changed = true; }
-  });
-  if (changed) saveAccounts(a);
-}
-
 async function doSignup() {
-  var id = (document.getElementById('auth-id').value || '').trim().toLowerCase();
-  var pw = document.getElementById('auth-password').value || '';
-  var msg = document.getElementById('auth-msg');
+  const id = (document.getElementById('auth-id').value || '').trim().toLowerCase();
+  const pw = document.getElementById('auth-password').value || '';
+  const msg = document.getElementById('auth-msg');
   if (!validEmail(id)) { msg.textContent = '// signup needs a valid email'; return; }
   if (pw.length < 6) { msg.textContent = '// password must be at least 6 characters'; return; }
-  var accounts = loadAccounts();
-  if (accounts[id]) { msg.textContent = '// account exists _ try log in'; return; }
-  var username = makeUsername();
-  var used = Object.keys(accounts).map(function(k){ return accounts[k].username; });
-  var tries = 0;
-  while (used.indexOf(username) !== -1 && tries < 20) { username = makeUsername(); tries++; }
-  accounts[id] = { username: username, passwordHash: await hashPassword(pw) };
-  saveAccounts(accounts);
-  localStorage.setItem(USER_KEY, username);
+
+  const username = makeUsername();
+  msg.textContent = '// creating account…';
+  const { data, error } = await supabase.auth.signUp({
+    email: id,
+    password: pw,
+    options: {
+      data: { username },
+      emailRedirectTo: window.location.origin + window.location.pathname
+    }
+  });
+  if (error) { msg.textContent = '// ' + error.message; return; }
   msg.textContent = '// account created _ your alias is ' + username;
-  setTimeout(function(){ enterApp(); }, 800);
+  // if session is returned immediately, enter app
+  if (data.session) {
+    await onAuthReady();
+  } else {
+    // try sign-in (auto-confirm should be on)
+    const { error: e2 } = await supabase.auth.signInWithPassword({ email: id, password: pw });
+    if (!e2) await onAuthReady();
+  }
 }
 
 async function doLogin() {
-  var id = (document.getElementById('auth-id').value || '').trim().toLowerCase();
-  var pw = document.getElementById('auth-password').value || '';
-  var msg = document.getElementById('auth-msg');
-  if (!id || !pw) { msg.textContent = '// enter email/username and password'; return; }
-  var accounts = loadAccounts();
-  var entry = accounts[id];
-  if (!entry) {
-    // try lookup by username
-    var match = Object.keys(accounts).find(function(k){ return accounts[k].username === id; });
-    if (match) entry = accounts[match];
-  }
-  if (!entry) { msg.textContent = '// no account _ hit create account'; return; }
-  var hash = await hashPassword(pw);
-  if (entry.passwordHash && entry.passwordHash !== hash) {
-    msg.textContent = '// wrong password'; return;
-  }
-  localStorage.setItem(USER_KEY, entry.username);
-  enterApp();
+  const id = (document.getElementById('auth-id').value || '').trim().toLowerCase();
+  const pw = document.getElementById('auth-password').value || '';
+  const msg = document.getElementById('auth-msg');
+  if (!id || !pw) { msg.textContent = '// enter email and password'; return; }
+  if (!validEmail(id)) { msg.textContent = '// log in with your email'; return; }
+  msg.textContent = '// logging in…';
+  const { error } = await supabase.auth.signInWithPassword({ email: id, password: pw });
+  if (error) { msg.textContent = '// ' + error.message; return; }
+  await onAuthReady();
 }
 
-function signOut() {
-  localStorage.removeItem(USER_KEY);
+async function signOut() {
+  await supabase.auth.signOut();
+  currentUser = null;
+  currentUsername = null;
+  cachedNotes = [];
   showAuth();
 }
 
 function showAuth() {
-  document.querySelectorAll('.page').forEach(function (p) { p.classList.remove('active'); });
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.getElementById('pg-auth').classList.add('active');
   document.getElementById('nav-links').style.display = 'none';
 }
 
-function enterApp() {
+async function onAuthReady() {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) { showAuth(); return; }
+  currentUser = user;
+  // fetch username from profiles
+  const { data: profile } = await supabase
+    .from('profiles').select('username').eq('user_id', user.id).maybeSingle();
+  currentUsername = profile?.username || user.user_metadata?.username || 'unknown';
   document.getElementById('nav-links').style.display = 'flex';
-  var me = getUser();
-  var lbl = document.getElementById('me-label');
-  if (lbl) lbl.textContent = me;
-  var nav = document.getElementById('nav-me');
-  if (nav) nav.textContent = '☉ ' + me + ' _ sign out';
+  const lbl = document.getElementById('me-label');
+  if (lbl) lbl.textContent = currentUsername;
+  const nav = document.getElementById('nav-me');
+  if (nav) nav.textContent = '☉ ' + currentUsername + ' _ sign out';
   go('home');
 }
 
 // ================================
 // PAGE SWITCH
 // ================================
-function go(id) {
-  if (!getUser()) { showAuth(); return; }
-  document.querySelectorAll('.page').forEach(function (p) { p.classList.remove('active'); });
+async function go(id) {
+  if (!currentUser) { showAuth(); return; }
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.getElementById('pg-' + id).classList.add('active');
-  if (id === 'hall' || id === 'graveyard' || id === 'completed') renderBoards();
+  if (id === 'hall' || id === 'graveyard' || id === 'completed') {
+    await fetchNotes();
+    renderBoards();
+  }
 }
 
 // ================================
 // STICKY SETTINGS
 // ================================
-var stickyColours = ['#FDE68A','#FCA5A5','#86EFAC','#93C5FD','#C4B5FD','#EF4444','#3B82F6','#EAB308','#F97316','#EC4899','#14B8A6','#8B5CF6','#F43F5E','#06B6D4','#84CC16'];
-var rotations = [-2, 1.5, -1, 2, -1.5, 1, -2.5, 1.2];
+const stickyColours = ['#FDE68A','#FCA5A5','#86EFAC','#93C5FD','#C4B5FD','#EF4444','#3B82F6','#EAB308','#F97316','#EC4899','#14B8A6','#8B5CF6','#F43F5E','#06B6D4','#84CC16'];
+const rotations = [-2, 1.5, -1, 2, -1.5, 1, -2.5, 1.2];
 
 // ================================
-// TRANSLATE / CREATE NOTE
+// CREATE NOTE
 // ================================
-function doTranslate() {
-  var thing = document.getElementById('inp-thing').value || 'going to the gym';
-  var num = document.getElementById('inp-num').value;
-  var unit = document.getElementById('inp-unit').value;
-  var dNum = parseInt(document.getElementById('inp-deadline-num').value, 10) || 1;
-  var dUnit = document.getElementById('inp-deadline-unit').value;
+async function doTranslate() {
+  if (!currentUser) { showAuth(); return; }
+  const thing = document.getElementById('inp-thing').value || 'going to the gym';
+  const num = parseInt(document.getElementById('inp-num').value, 10) || 1;
+  const unit = document.getElementById('inp-unit').value;
+  const dNum = parseInt(document.getElementById('inp-deadline-num').value, 10) || 1;
+  const dUnit = document.getElementById('inp-deadline-unit').value;
+  const ms = { minutes: 60000, hours: 3600000, days: 86400000, weeks: 604800000 }[dUnit];
+  const deadline = new Date(Date.now() + dNum * ms).toISOString();
+  const colour = stickyColours[Math.floor(Math.random() * stickyColours.length)];
 
-  var ms = { minutes: 60000, hours: 3600000, days: 86400000, weeks: 604800000 }[dUnit];
-  var deadline = Date.now() + dNum * ms;
-
-  var notes = loadNotes();
-  notes.push({
-    id: Date.now() + '-' + Math.random().toString(36).slice(2,7),
-    user: getUser(),
-    thing: thing,
-    num: num,
-    unit: unit,
-    deadlineNum: dNum,
-    deadlineUnit: dUnit,
-    deadline: deadline,
-    colour: stickyColours[Math.floor(Math.random() * stickyColours.length)],
-    completed: false,
-    createdAt: Date.now()
+  const { error } = await supabase.from('notes').insert({
+    user_id: currentUser.id,
+    username: currentUsername,
+    thing, num, unit,
+    deadline_num: dNum,
+    deadline_unit: dUnit,
+    deadline,
+    colour,
+    completed: false
   });
-  saveNotes(notes);
+  if (error) { alert('Could not save: ' + error.message); return; }
   go('hall');
 }
 
 // ================================
-// EXPIRY CHECK
+// FETCH NOTES
 // ================================
-function checkExpiry() {
-  var notes = loadNotes();
-  var now = Date.now();
-  var changed = false;
-  notes.forEach(function (n) {
-    if (!n.completed && !n.expired && n.deadline && now > n.deadline) {
-      n.expired = true;
-      changed = true;
-    }
-  });
-  if (changed) saveNotes(notes);
+async function fetchNotes() {
+  const { data, error } = await supabase
+    .from('notes').select('*').order('created_at', { ascending: false });
+  if (error) { console.error(error); cachedNotes = []; return; }
+  cachedNotes = (data || []).map(n => ({
+    id: n.id,
+    user_id: n.user_id,
+    user: n.username,
+    thing: n.thing,
+    num: n.num,
+    unit: n.unit,
+    deadlineNum: n.deadline_num,
+    deadlineUnit: n.deadline_unit,
+    deadline: new Date(n.deadline).getTime(),
+    colour: n.colour,
+    completed: n.completed,
+    completedAt: n.completed_at ? new Date(n.completed_at).getTime() : null,
+    createdAt: new Date(n.created_at).getTime()
+  }));
 }
 
 // ================================
@@ -194,11 +192,11 @@ function checkExpiry() {
 // ================================
 function timeLeft(ms) {
   if (ms <= 0) return 'time up';
-  var s = Math.floor(ms/1000);
+  const s = Math.floor(ms/1000);
   if (s < 60) return s + 's left';
-  var m = Math.floor(s/60);
+  const m = Math.floor(s/60);
   if (m < 60) return m + 'm left';
-  var h = Math.floor(m/60);
+  const h = Math.floor(m/60);
   if (h < 24) return h + 'h left';
   return Math.floor(h/24) + 'd left';
 }
@@ -207,41 +205,44 @@ function timeLeft(ms) {
 // RENDER BOARDS
 // ================================
 function renderBoards() {
-  checkExpiry();
-  var notes = loadNotes();
-  var me = getUser();
+  const now = Date.now();
+  const meId = currentUser?.id;
 
-  var done   = notes.filter(function(n){ return n.completed; });
-  var dead   = notes.filter(function(n){ return n.expired && !n.completed; });
-  var active = notes.filter(function(n){ return !n.expired && !n.completed; });
+  const done   = cachedNotes.filter(n => n.completed);
+  const dead   = cachedNotes.filter(n => !n.completed && n.deadline && now > n.deadline);
+  const active = cachedNotes.filter(n => !n.completed && (!n.deadline || now <= n.deadline));
 
-  var mine = active.filter(function(n){ return n.user === me; });
-  var others = active.filter(function(n){ return n.user !== me; });
+  const mine = active.filter(n => n.user_id === meId);
+  const others = active.filter(n => n.user_id !== meId);
 
-  var boardMine = document.getElementById('board-mine');
-  var boardOthers = document.getElementById('board-others');
-  var grave = document.getElementById('graveyard-board');
-  var completedBoard = document.getElementById('completed-board');
+  const boardMine = document.getElementById('board-mine');
+  const boardOthers = document.getElementById('board-others');
+  const grave = document.getElementById('graveyard-board');
+  const completedBoard = document.getElementById('completed-board');
 
   if (boardMine) {
     boardMine.innerHTML = '';
     if (mine.length === 0) {
       boardMine.innerHTML = '<p class="muted" style="grid-column:1/-1;">// nothing here yet _ add one from the home screen</p>';
     } else {
-      mine.forEach(function(n, i){ boardMine.appendChild(buildNote(n, i, false, me)); });
+      mine.forEach((n, i) => boardMine.appendChild(buildNote(n, i, false, meId)));
     }
   }
   if (boardOthers) {
     boardOthers.innerHTML = '';
-    others.forEach(function(n, i){ boardOthers.appendChild(buildNote(n, i, false, me)); });
+    if (others.length === 0) {
+      boardOthers.innerHTML = '<p class="muted" style="grid-column:1/-1;">// no one else has posted yet _ invite a friend</p>';
+    } else {
+      others.forEach((n, i) => boardOthers.appendChild(buildNote(n, i, false, meId)));
+    }
   }
-  var hc = document.getElementById('hall-count');
+  const hc = document.getElementById('hall-count');
   if (hc) hc.textContent = active.length + (active.length === 1 ? ' entry' : ' entries');
 
   if (grave) {
     grave.innerHTML = '';
-    dead.forEach(function(n, i){ grave.appendChild(buildNote(n, i, true, me)); });
-    var gc = document.getElementById('grave-count');
+    dead.forEach((n, i) => grave.appendChild(buildNote(n, i, true, meId)));
+    const gc = document.getElementById('grave-count');
     if (gc) gc.textContent = dead.length + ' buried';
   }
 
@@ -250,65 +251,30 @@ function renderBoards() {
     if (done.length === 0) {
       completedBoard.innerHTML = '<p class="muted" style="grid-column:1/-1;">// no completed tasks yet _ go finish something</p>';
     } else {
-      done.forEach(function(n, i){ completedBoard.appendChild(buildNote(n, i, false, me)); });
+      done.forEach((n, i) => completedBoard.appendChild(buildNote(n, i, false, meId)));
     }
-    var dc = document.getElementById('done-count');
+    const dc = document.getElementById('done-count');
     if (dc) dc.textContent = done.length + ' done';
   }
 }
 
-// ================================
-// SEED FAKE NOTES FROM OTHER USERS
-// ================================
-var SEED_KEY = 'almost_seeded_v1';
-var SAMPLE_THINGS = [
-  'replying to that email','starting my dissertation','calling the dentist',
-  'going for a run','cleaning my room','learning guitar','journaling',
-  'finishing the book','cancelling the subscription','texting back',
-  'doing my taxes','asking for a raise','meditating','sorting the laundry'
-];
-function seedOthers() {
-  if (localStorage.getItem(SEED_KEY)) return;
-  var notes = loadNotes();
-  var n = 8 + Math.floor(Math.random()*4);
-  for (var i = 0; i < n; i++) {
-    var thing = SAMPLE_THINGS[Math.floor(Math.random()*SAMPLE_THINGS.length)];
-    var num = 1 + Math.floor(Math.random()*11);
-    var unit = ['days','weeks','months','years'][Math.floor(Math.random()*4)];
-    var dNum = 1 + Math.floor(Math.random()*6);
-    var dUnit = ['hours','days','weeks'][Math.floor(Math.random()*3)];
-    var ms = { hours: 3600000, days: 86400000, weeks: 604800000 }[dUnit];
-    notes.push({
-      id: 'seed-' + i + '-' + Math.random().toString(36).slice(2,7),
-      user: makeUsername(),
-      thing: thing, num: num, unit: unit,
-      deadlineNum: dNum, deadlineUnit: dUnit,
-      deadline: Date.now() + dNum * ms,
-      colour: stickyColours[Math.floor(Math.random() * stickyColours.length)],
-      completed: false, createdAt: Date.now()
-    });
-  }
-  saveNotes(notes);
-  localStorage.setItem(SEED_KEY, '1');
-}
-
-function buildNote(n, i, isDead, me) {
-  var rotation = rotations[i % rotations.length];
-  var note = document.createElement('div');
+function buildNote(n, i, isDead, meId) {
+  const rotation = rotations[i % rotations.length];
+  const note = document.createElement('div');
   note.className = 'sticky' + (isDead ? ' dead' : '') + (n.completed ? ' done' : '');
-  var bg = n.colour || stickyColours[Math.floor(Math.random() * stickyColours.length)];
+  let bg = n.colour || stickyColours[Math.floor(Math.random() * stickyColours.length)];
   if (n.completed) bg = '#86EFAC';
   else if (isDead) bg = '#8A8A8A';
   note.style.background = bg;
   note.style.setProperty('--rot', rotation + 'deg');
   note.style.transform = 'rotate(' + rotation + 'deg)';
 
-  var left = isDead ? 'expired' : timeLeft(n.deadline - Date.now());
-  var mine = n.user === me;
+  const left = isDead ? 'expired' : timeLeft(n.deadline - Date.now());
+  const mine = n.user_id === meId;
 
   note.innerHTML =
     '<div class="s-pin"></div>' +
-    '<div class="s-no">' + (mine ? '★ ' : '') + n.user + '</div>' +
+    '<div class="s-no">' + (mine ? '★ ' : '') + escapeHtml(n.user) + '</div>' +
     '<div class="s-thing">' + escapeHtml(n.thing) + '</div>' +
     '<div class="s-time">avoided ' + n.num + ' ' + n.unit + '</div>' +
     '<div class="s-time">' + left + '</div>' +
@@ -317,7 +283,7 @@ function buildNote(n, i, isDead, me) {
       : (n.completed ? '<div class="s-time">✓ completed</div>' : ''));
 
   if (mine && !isDead && !n.completed) {
-    note.querySelector('.s-done').onclick = function (e) {
+    note.querySelector('.s-done').onclick = (e) => {
       e.stopPropagation();
       markDone(n.id);
     };
@@ -326,37 +292,39 @@ function buildNote(n, i, isDead, me) {
 }
 
 function escapeHtml(s) {
-  return String(s).replace(/[&<>"']/g, function(c){
-    return { '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c];
-  });
+  return String(s).replace(/[&<>"']/g, c =>
+    ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c])
+  );
 }
 
-function markDone(id) {
-  var notes = loadNotes();
-  notes.forEach(function(n){ if (n.id === id) n.completed = true; });
-  saveNotes(notes);
+async function markDone(id) {
+  const { error } = await supabase.from('notes')
+    .update({ completed: true, completed_at: new Date().toISOString() })
+    .eq('id', id);
+  if (error) { alert('Could not update: ' + error.message); return; }
+  await fetchNotes();
   renderBoards();
 }
 
 // ================================
 // TIMER
 // ================================
-var TIMER_START = 5 * 60;
-var timerSeconds = TIMER_START;
-var timerInterval = null;
-var timerRunning = false;
+const TIMER_START = 5 * 60;
+let timerSeconds = TIMER_START;
+let timerInterval = null;
+let timerRunning = false;
 
 function fmt(s) {
-  var m = Math.floor(s/60); var r = s%60;
+  const m = Math.floor(s/60), r = s%60;
   return m + ':' + (r < 10 ? '0' + r : r);
 }
 function updateTimerDisplay() {
   document.getElementById('timer-display').textContent = fmt(timerSeconds);
 }
 function toggleTimer() {
-  var btn = document.getElementById('timer-toggle');
-  var display = document.getElementById('timer-display');
-  var status = document.getElementById('timer-status');
+  const btn = document.getElementById('timer-toggle');
+  const display = document.getElementById('timer-display');
+  const status = document.getElementById('timer-status');
   if (timerRunning) {
     clearInterval(timerInterval); timerRunning = false;
     btn.textContent = 'resume →';
@@ -369,7 +337,7 @@ function toggleTimer() {
   btn.textContent = 'pause';
   status.textContent = "// you're doing it. that's the whole point.";
   display.classList.add('running'); display.classList.remove('done');
-  timerInterval = setInterval(function () {
+  timerInterval = setInterval(() => {
     timerSeconds--; updateTimerDisplay();
     if (timerSeconds <= 0) {
       clearInterval(timerInterval); timerRunning = false;
@@ -384,111 +352,100 @@ function resetTimer() {
   timerSeconds = TIMER_START; updateTimerDisplay();
   document.getElementById('timer-toggle').textContent = 'start →';
   document.getElementById('timer-status').textContent = "// click start when you're ready";
-  var display = document.getElementById('timer-display');
+  const display = document.getElementById('timer-display');
   display.classList.remove('running'); display.classList.remove('done');
 }
 
 // ================================
-// INIT
-// ================================
-(function init() {
-  migrateAccounts();
-  seedOthers();
-  checkExpiry();
-  if (getUser()) {
-    enterApp();
-  } else {
-    showAuth();
-  }
-  setInterval(function(){
-    checkExpiry();
-    var hall = document.getElementById('pg-hall');
-    var grave = document.getElementById('pg-graveyard');
-    if ((hall && hall.classList.contains('active')) ||
-        (grave && grave.classList.contains('active'))) {
-      renderBoards();
-    }
-  }, 30000);
-})();
-
-// ================================
 // SETTINGS MENU
 // ================================
-var THEME_KEY = 'almost_theme_v1';
+const THEME_KEY = 'almost_theme_v1';
 
 function applyTheme(t) {
   if (t === 'dark') document.body.classList.add('theme-dark');
   else document.body.classList.remove('theme-dark');
-  var btn = document.getElementById('theme-toggle');
+  const btn = document.getElementById('theme-toggle');
   if (btn) btn.textContent = t === 'dark' ? 'light' : 'dark';
 }
 function toggleTheme() {
-  var cur = localStorage.getItem(THEME_KEY) === 'dark' ? 'dark' : 'light';
-  var next = cur === 'dark' ? 'light' : 'dark';
+  const cur = localStorage.getItem(THEME_KEY) === 'dark' ? 'dark' : 'light';
+  const next = cur === 'dark' ? 'light' : 'dark';
   localStorage.setItem(THEME_KEY, next);
   applyTheme(next);
 }
 function toggleSettings(e) {
   if (e) e.stopPropagation();
-  var m = document.getElementById('settings-menu');
+  const m = document.getElementById('settings-menu');
   m.classList.toggle('open');
 }
-document.addEventListener('click', function(e){
-  var m = document.getElementById('settings-menu');
-  var dots = document.getElementById('nav-settings');
+document.addEventListener('click', (e) => {
+  const m = document.getElementById('settings-menu');
+  const dots = document.getElementById('nav-settings');
   if (!m || !m.classList.contains('open')) return;
   if (m.contains(e.target) || (dots && dots.contains(e.target))) return;
   m.classList.remove('open');
 });
 
-function findAccountByUsername(username) {
-  var accounts = loadAccounts();
-  var key = Object.keys(accounts).find(function(k){ return accounts[k].username === username; });
-  return key ? { key: key, entry: accounts[key], accounts: accounts } : null;
-}
-
 async function changeEmail() {
-  var msg = document.getElementById('set-msg');
-  var newEmail = (document.getElementById('set-email').value || '').trim().toLowerCase();
-  var pw = document.getElementById('set-email-pw').value || '';
+  const msg = document.getElementById('set-msg');
+  const newEmail = (document.getElementById('set-email').value || '').trim().toLowerCase();
   if (!validEmail(newEmail)) { msg.textContent = '// enter a valid email'; return; }
-  var me = getUser();
-  var found = findAccountByUsername(me);
-  if (!found) { msg.textContent = '// account not found'; return; }
-  var hash = await hashPassword(pw);
-  if (found.entry.passwordHash && found.entry.passwordHash !== hash) {
-    msg.textContent = '// wrong current password'; return;
-  }
-  if (found.accounts[newEmail] && newEmail !== found.key) {
-    msg.textContent = '// that email is already used'; return;
-  }
-  delete found.accounts[found.key];
-  found.accounts[newEmail] = found.entry;
-  saveAccounts(found.accounts);
+  msg.textContent = '// updating…';
+  const { error } = await supabase.auth.updateUser({ email: newEmail });
+  if (error) { msg.textContent = '// ' + error.message; return; }
   document.getElementById('set-email').value = '';
   document.getElementById('set-email-pw').value = '';
-  msg.textContent = '// email updated';
+  msg.textContent = '// check your new email to confirm the change';
 }
 
 async function changePassword() {
-  var msg = document.getElementById('set-msg');
-  var oldPw = document.getElementById('set-pw-old').value || '';
-  var newPw = document.getElementById('set-pw-new').value || '';
+  const msg = document.getElementById('set-msg');
+  const newPw = document.getElementById('set-pw-new').value || '';
   if (newPw.length < 6) { msg.textContent = '// new password must be 6+ chars'; return; }
-  var me = getUser();
-  var found = findAccountByUsername(me);
-  if (!found) { msg.textContent = '// account not found'; return; }
-  var oldHash = await hashPassword(oldPw);
-  if (found.entry.passwordHash && found.entry.passwordHash !== oldHash) {
-    msg.textContent = '// wrong current password'; return;
-  }
-  found.entry.passwordHash = await hashPassword(newPw);
-  found.accounts[found.key] = found.entry;
-  saveAccounts(found.accounts);
+  msg.textContent = '// updating…';
+  const { error } = await supabase.auth.updateUser({ password: newPw });
+  if (error) { msg.textContent = '// ' + error.message; return; }
   document.getElementById('set-pw-old').value = '';
   document.getElementById('set-pw-new').value = '';
   msg.textContent = '// password updated';
 }
 
-// init theme on load
+// ================================
+// INIT
+// ================================
 applyTheme(localStorage.getItem(THEME_KEY) === 'dark' ? 'dark' : 'light');
+
+// expose to inline handlers
+Object.assign(window, {
+  go, doLogin, doSignup, signOut, doTranslate,
+  toggleTimer, resetTimer, toggleTheme, toggleSettings,
+  changeEmail, changePassword
+});
+
+(async function init() {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (session) {
+    await onAuthReady();
+  } else {
+    showAuth();
+  }
+
+  supabase.auth.onAuthStateChange((event, session) => {
+    if (event === 'SIGNED_OUT') showAuth();
+  });
+
+  // periodically refresh the boards if visible
+  setInterval(async () => {
+    const hall = document.getElementById('pg-hall');
+    const grave = document.getElementById('pg-graveyard');
+    const completed = document.getElementById('pg-completed');
+    if (currentUser && (
+      (hall && hall.classList.contains('active')) ||
+      (grave && grave.classList.contains('active')) ||
+      (completed && completed.classList.contains('active'))
+    )) {
+      await fetchNotes();
+      renderBoards();
+    }
+  }, 15000);
+})();
