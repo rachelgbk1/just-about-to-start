@@ -139,7 +139,7 @@ function go(id) {
 // ================================
 // STICKY SETTINGS
 // ================================
-var stickyColours = ['#FDE68A', '#FCA5A5', '#86EFAC', '#93C5FD', '#C4B5FD'];
+var stickyColours = ['#FDE68A','#FCA5A5','#86EFAC','#93C5FD','#C4B5FD','#EF4444','#3B82F6','#EAB308','#F97316','#EC4899','#14B8A6','#8B5CF6','#F43F5E','#06B6D4','#84CC16'];
 var rotations = [-2, 1.5, -1, 2, -1.5, 1, -2.5, 1.2];
 
 // ================================
