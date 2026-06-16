@@ -296,7 +296,7 @@ function buildNote(n, i, isDead, me) {
   var rotation = rotations[i % rotations.length];
   var note = document.createElement('div');
   note.className = 'sticky' + (isDead ? ' dead' : '') + (n.completed ? ' done' : '');
-  var bg = '#BDBDBD';
+  var bg = n.colour || stickyColours[Math.floor(Math.random() * stickyColours.length)];
   if (n.completed) bg = '#86EFAC';
   else if (isDead) bg = '#8A8A8A';
   note.style.background = bg;
